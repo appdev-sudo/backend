@@ -23,6 +23,11 @@ const medicalServiceSchema = new mongoose.Schema(
     bullets: [{ type: String }],
     sections: [detailSectionSchema],
     imageUrl: { type: String },
+    serviceType: {
+      type: String,
+      enum: ['subscription', 'individual'],
+      default: 'individual',
+    },
     order: { type: Number, default: 0 },
   },
   { timestamps: true }

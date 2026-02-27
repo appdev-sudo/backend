@@ -21,10 +21,11 @@ router.get('/', authMiddleware, async (req, res) => {
                 email: user.email,
                 age: user.age,
                 sex: user.sex,
-                weight: user.weight,
-                height: user.height,
-                comorbidities: user.comorbidities,
-                medications: user.medications,
+                // weight: user.weight,
+                // height: user.height,
+                // comorbidities: user.comorbidities,
+                // medications: user.medications,
+                location: user.location,
                 profileCompleted: user.profileCompleted,
                 isPhoneVerified: user.isPhoneVerified,
             },
@@ -38,12 +39,12 @@ router.get('/', authMiddleware, async (req, res) => {
 // Update user profile
 router.put('/', authMiddleware, async (req, res) => {
     try {
-        const { name, age, sex, weight, height, comorbidities, medications } = req.body;
+        const { name, age, sex, location } = req.body;
 
         // Validation
-        if (!name || !age || !sex || !weight || !height) {
+        if (!name || !age || !sex) {
             return res.status(400).json({
-                error: 'Name, age, sex, weight, and height are required'
+                error: 'Name, age, and sex are required'
             });
         }
 
@@ -51,15 +52,15 @@ router.put('/', authMiddleware, async (req, res) => {
             return res.status(400).json({ error: 'Invalid age' });
         }
 
-        if (weight < 1 || weight > 500) {
-            return res.status(400).json({ error: 'Invalid weight' });
-        }
+        // if (weight < 1 || weight > 500) {
+        //     return res.status(400).json({ error: 'Invalid weight' });
+        // }
 
-        if (height < 50 || height > 300) {
-            return res.status(400).json({ error: 'Invalid height' });
-        }
+        // if (height < 50 || height > 300) {
+        //     return res.status(400).json({ error: 'Invalid height' });
+        // }
 
-        if (!['Male', 'Female', 'Other'].includes(sex)) {
+        if (sex && !['Male', 'Female', 'Other'].includes(sex)) {
             return res.status(400).json({ error: 'Invalid sex value' });
         }
 
@@ -70,13 +71,17 @@ router.put('/', authMiddleware, async (req, res) => {
         }
 
         // Update profile
+        // Update profile
         user.name = name;
         user.age = age;
         user.sex = sex;
-        user.weight = weight;
-        user.height = height;
-        user.comorbidities = comorbidities || [];
-        user.medications = medications || [];
+        // user.weight = weight;
+        // user.height = height;
+        // user.comorbidities = comorbidities || [];
+        // user.medications = medications || [];
+        if (location) {
+            user.location = location;
+        }
         user.profileCompleted = true;
 
         await user.save();
@@ -91,10 +96,11 @@ router.put('/', authMiddleware, async (req, res) => {
                 email: user.email,
                 age: user.age,
                 sex: user.sex,
-                weight: user.weight,
-                height: user.height,
-                comorbidities: user.comorbidities,
-                medications: user.medications,
+                // weight: user.weight,
+                // height: user.height,
+                // comorbidities: user.comorbidities,
+                // medications: user.medications,
+                location: user.location,
                 isPhoneVerified: user.isPhoneVerified,
                 profileCompleted: user.profileCompleted,
             },

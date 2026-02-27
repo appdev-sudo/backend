@@ -12,10 +12,23 @@ const userSchema = new mongoose.Schema(
     // Profile fields
     age: { type: Number },
     sex: { type: String, enum: ['Male', 'Female', 'Other'] },
-    weight: { type: Number }, // in kg
-    height: { type: Number }, // in cm
-    comorbidities: [{ type: String }],
-    medications: [{ type: String }],
+    // weight: { type: Number }, // in kg
+    // height: { type: Number }, // in cm
+    // comorbidities: [{ type: String }],
+    // medications: [{ type: String }],
+    location: {
+      latitude: { type: Number },
+      longitude: { type: Number }, // stored but not always shown
+      address: {
+        street: { type: String },
+        landmark: { type: String },
+        city: { type: String },
+        state: { type: String },
+        pincode: { type: String },
+        country: { type: String },
+        formattedAddress: { type: String },
+      },
+    },
   },
   { timestamps: true }
 );

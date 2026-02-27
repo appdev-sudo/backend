@@ -124,6 +124,19 @@ router.post('/verify-otp', async (req, res) => {
                 phone: phoneNumber,
                 isPhoneVerified: true,
                 profileCompleted: false,
+                location: {
+                    latitude: 0,
+                    longitude: 0,
+                    address: {
+                        street: '',
+                        landmark: '',
+                        city: '',
+                        state: '',
+                        pincode: '',
+                        country: '',
+                        formattedAddress: ''
+                    }
+                }
             });
         } else {
             user.isPhoneVerified = true;
@@ -147,10 +160,11 @@ router.post('/verify-otp', async (req, res) => {
                 email: user.email,
                 age: user.age,
                 sex: user.sex,
-                weight: user.weight,
-                height: user.height,
-                comorbidities: user.comorbidities,
-                medications: user.medications,
+                // weight: user.weight,
+                // height: user.height,
+                // comorbidities: user.comorbidities,
+                // medications: user.medications,
+                location: user.location,
                 isPhoneVerified: user.isPhoneVerified,
                 profileCompleted: user.profileCompleted,
             },

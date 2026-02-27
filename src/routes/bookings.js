@@ -24,8 +24,11 @@ router.post('/', async (req, res) => {
       serviceId: service.serviceId,
       serviceTitle: service.title,
       preferredDate: preferredDate ? new Date(preferredDate) : undefined,
+
       preferredTimeSlot: preferredTimeSlot || undefined,
+      address: req.body.address,
       notes: notes || undefined,
+      paymentStatus: 'pending', // Default for now until payment flow is integrated
     });
     await booking.save();
     await booking.populate('service', 'title category price');
