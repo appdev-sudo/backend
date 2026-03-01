@@ -8,6 +8,7 @@ const servicesRoutes = require('./routes/services');
 const bookingsRoutes = require('./routes/bookings');
 const phoneAuthRoutes = require('./routes/phoneAuth');
 const profileRoutes = require('./routes/profile');
+const paymentsRoutes = require('./routes/payments');
 
 connectDB();
 
@@ -23,6 +24,7 @@ app.use('/api/services', servicesRoutes);
 // Protected (bookings and profile require login)
 app.use('/api/bookings', bookingsRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/payments', paymentsRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, message: 'VytalYou API' });

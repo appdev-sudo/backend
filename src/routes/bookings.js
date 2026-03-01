@@ -28,7 +28,8 @@ router.post('/', async (req, res) => {
       preferredTimeSlot: preferredTimeSlot || undefined,
       address: req.body.address,
       notes: notes || undefined,
-      paymentStatus: 'pending', // Default for now until payment flow is integrated
+      paymentStatus: req.body.paymentId ? 'paid' : 'pending',
+      paymentId: req.body.paymentId || undefined,
     });
     await booking.save();
     await booking.populate('service', 'title category price');
