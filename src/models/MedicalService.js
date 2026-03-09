@@ -20,6 +20,9 @@ const medicalServiceSchema = new mongoose.Schema(
     price: { type: String },
     sessionInfo: { type: String },
     tagline: { type: String },
+    benefits: { type: String },
+    idealFor: { type: String },
+    targetAudience: { type: String }, // kept for backward compatibility if any
     bullets: [{ type: String }],
     sections: [detailSectionSchema],
     imageUrl: { type: String },
