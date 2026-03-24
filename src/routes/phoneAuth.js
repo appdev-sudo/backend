@@ -223,4 +223,64 @@ router.post('/resend-otp', async (req, res) => {
     }
 });
 
+// Delete account API
+router.post('/delete-account', async (req, res) => {
+    try {
+        const { phoneNumber, otp } = req.body;
+
+        if (!phoneNumber || !otp) {
+            return res.status(400).json({ error: 'Phone number and OTP are required' });
+        }
+
+        // Find OTP verification record
+        const otpRecord = await OtpVerification.findOne({
+            phoneNumber,
+            isVerified: false
+        }).sort({ createdAt: -1 });
+
+        if (!otpRecord) {
+            return res.status(400).json({ error: 'No OTP found. Please request a new one.' });
+        }
+
+        // Check if OTP is expired
+        if (new Date() > otpRecord.expiresAt) {
+            return res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
+        }
+
+        // Check if too many attempts
+        if (otpRecord.attempts >= 5) {
+            return res.status(400).json({ error: 'Too many attempts. Please request a new OTP.' });
+        }
+
+        // Verify OTP
+        if (otpRecord.otp !== otp) {
+            otpRecord.attempts += 1;
+            await otpRecord.save();
+            return res.status(400).json({
+                error: 'Invalid OTP',
+                attemptsLeft: 5 - otpRecord.attempts
+            });
+        }
+
+        // OTP is verified, find and delete user
+        const user = await User.findOne({ phone: phoneNumber });
+        if (!user) {
+            return res.status(404).json({ error: 'User account not found' });
+        }
+
+        await User.findOneAndDelete({ phone: phoneNumber });
+        
+        // Clean up OTP records
+        await OtpVerification.deleteMany({ phoneNumber });
+
+        res.json({
+            success: true,
+            message: 'User account deleted successfully'
+        });
+    } catch (error) {
+        console.error('Delete account error:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
 module.exports = router;
