@@ -7,7 +7,8 @@
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
     "seed": "node src/scripts/seed.js",
-    "seed:ivdrips": "node src/scripts/seedIvDrips.js"
+    "seed:ivdrips": "node src/scripts/seedIvDrips.js",
+    "seed:blogs": "node src/scripts/seedBlogs.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -17,6 +18,7 @@
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.0.3",
-    "twilio": "^5.12.1"
+    "twilio": "^5.12.1",
+    "xlsx": "^0.18.5"
   }
 }

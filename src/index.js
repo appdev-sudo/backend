@@ -9,6 +9,7 @@ const bookingsRoutes = require('./routes/bookings');
 const phoneAuthRoutes = require('./routes/phoneAuth');
 const profileRoutes = require('./routes/profile');
 const paymentsRoutes = require('./routes/payments');
+const blogRoutes = require('./routes/blogs');
 
 connectDB();
 
@@ -20,6 +21,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/auth/phone', phoneAuthRoutes);
 app.use('/api/services', servicesRoutes);
+app.use('/api/blogs', blogRoutes);
 
 // Protected (bookings and profile require login)
 app.use('/api/bookings', bookingsRoutes);
