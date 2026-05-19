@@ -1,6 +1,7 @@
 const express = require('express');
 const Booking = require('../models/Booking');
 const MedicalService = require('../models/MedicalService');
+const Nurse = require('../models/Nurse');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
@@ -24,7 +25,6 @@ router.post('/', async (req, res) => {
       serviceId: service.serviceId,
       serviceTitle: service.title,
       preferredDate: preferredDate ? new Date(preferredDate) : undefined,
-
       preferredTimeSlot: preferredTimeSlot || undefined,
       address: req.body.address,
       notes: notes || undefined,
@@ -39,25 +39,29 @@ router.post('/', async (req, res) => {
   }
 });
 
-// GET /api/bookings/me — list current user's bookings
+// GET /api/bookings/me — list current user's bookings (with nurse info)
 router.get('/me', async (req, res) => {
   try {
     const bookings = await Booking.find({ user: req.user._id })
       .sort({ createdAt: -1 })
-      .populate('service', 'title category price serviceId');
+      .populate('service', 'title category price serviceId')
+      .populate('nurse', 'name phone nurseId');
     res.json(bookings);
   } catch (err) {
     res.status(500).json({ error: err.message || 'Failed to fetch bookings.' });
   }
 });
 
-// GET /api/bookings/:id — single booking (own only)
+// GET /api/bookings/:id — single booking (own only) with nurse + OTP info
 router.get('/:id', async (req, res) => {
   try {
     const booking = await Booking.findOne({
       _id: req.params.id,
       user: req.user._id,
-    }).populate('service', 'title category price serviceId fullDescription');
+    })
+      .populate('service', 'title category price serviceId fullDescription')
+      .populate('nurse', 'name phone nurseId');
+
     if (!booking) {
       return res.status(404).json({ error: 'Booking not found.' });
     }
