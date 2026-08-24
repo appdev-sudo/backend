@@ -228,11 +228,122 @@ async function seedBlogs() {
 
     // Filter only rows that have actual content
     const validRows = rows.filter(row => row['Content'] && row['Blog Topic']);
+    // Add the April blog
+    validRows.push({
+      'No.': validRows.length + 1,
+      'Blog Topic': 'How to Add 10+ Healthy Years to Your Life with IV Therapy',
+      'Category': 'Blog',
+      'Keywords': 'IV therapy\nLongevity\nHealthspan\nImmunity\nEnergy',
+      'Date Published': '2026-04-01',
+      'CoverImage': 'assets/blog/covers/april_blog_cover.png',
+      'Content': `Meta Title (60 characters):
+Add 10+ Healthy Years with IV Therapy | Vytalyou
+Meta Description (160 characters):
+Discover how personalized IV therapy helps boost energy, immunity & longevity. Explore IV therapy Mumbai & IV therapy at home with Vytalyou.
+
+How to Add 10+ Healthy Years to Your Life with IV Therapy
+Living longer is no longer the ultimate goal, living healthier for longer is.
+In a fast-paced city like Mumbai, where stress, pollution, and lifestyle demands take a toll on overall well-being, there is a growing shift toward science-backed, preventive approaches to longevity.
+This is where personalized IV therapy is creating a meaningful impact. At advanced longevity centers like Vytalyou, IV therapy goes beyond symptom management; it targets health at a cellular level, supporting recovery, optimization, and long-term vitality.
+What Does “Adding Healthy Years” Really Mean?
+Extending life is not just about lifespan it’s about healthspan.
+Healthspan refers to:
+Sustained energy as you age
+Preserved mental clarity
+Reduced risk of chronic disease
+Maintenance of strength, immunity, and function
+Modern wellness focuses on early detection, prevention, and optimization—a philosophy deeply embedded in Vytalyou’s approach.
+How Personalized IV Therapy Supports Longevity
+Unlike oral supplements, which are limited by digestion and absorption, IV therapy delivers nutrients directly into the bloodstream, ensuring maximum bioavailability and faster results.
+At Vytalyou, every IV therapy plan is guided by advanced diagnostics and predictive health insights, ensuring your body receives exactly what it needs.
+Corrects Hidden Nutrient Deficiencies
+Even with a balanced diet, many individuals experience undetected deficiencies due to stress, lifestyle, or poor absorption.
+IV therapy helps restore optimal levels of:
+Vitamins (B-complex, Vitamin C, Vitamin D)
+Minerals (magnesium, zinc)
+Antioxidants
+This supports cellular balance and long-term resilience.
+Boosts Cellular Energy Production
+Energy is fundamental to every biological process.
+As we age, mitochondrial efficiency declines, leading to fatigue and reduced performance. IV therapy supports mitochondrial function the energy engine of your cells helping you:
+Feel more energetic
+Improve productivity and performance
+Reduce fatigue and burnout
+Consistent energy is a cornerstone of healthy aging.
+Reduces Inflammation & Slows Aging
+Chronic inflammation is one of the primary drivers of aging and disease.
+Personalized IV therapy delivers potent antioxidants that:
+Neutralize free radicals
+Reduce oxidative stress
+Support cellular repair
+This helps slow biological aging and protect against long-term damage.
+Strengthens Immunity
+A strong immune system is essential for longevity.
+IV therapy supports:
+Enhanced immune response
+Reduced frequency of illness
+Faster recovery
+This translates to fewer health disruptions and greater overall stability in your well-being.
+Supports Brain Health & Mental Clarity
+Cognitive health is a key determinant of quality of life.
+IV therapy helps:
+Support neurotransmitter function
+Improve focus and memory
+Reduce brain fog
+Maintaining mental sharpness is essential for independence and vitality as you age.
+Enhances Detoxification
+Modern living exposes the body to constant toxins from pollution to processed foods.
+IV therapy supports detoxification by:
+Assisting liver function
+Promoting toxin elimination
+Improving metabolic efficiency
+In urban environments like Mumbai, this added support becomes especially valuable.
+The Vytalyou Approach to Longevity
+What sets Vytalyou apart is its precision-health ecosystem.
+Before recommending any therapy, the process includes:
+Comprehensive body evaluation
+Advanced blood marker analysis
+Cardiac and metabolic risk assessment
+Imaging and diagnostic insights
+This allows therapies to be tailored based on your biological age and risk profile, not just your chronological age.
+The focus is clear: extend your health span, not just treat symptoms.
+Can You Opt for IV Therapy at Home?
+At-home IV therapy is becoming increasingly popular for its convenience.
+Benefits include:
+Time efficiency for busy schedules
+Comfort of your home environment
+Reduced need for clinic visits
+However, safety remains paramount. Always ensure:
+Certified medical professionals administer the therapy
+Strict hygiene and clinical protocols are followed
+Proper consultation is completed beforehand
+Vytalyou offers safe, medically supervised at-home IV therapy, maintaining the same standards as in-clinic care.
+How Often Should You Take IV Therapy?
+The frequency of IV therapy depends on your individual goals and health status:
+General wellness: Every 2–4 weeks
+Energy and recovery: Weekly or bi-weekly
+Longevity optimization: As advised after detailed evaluation
+A structured, personalized plan ensures consistent and sustainable benefits.
+Lifestyle + IV Therapy = Maximum Longevity
+While IV therapy is a powerful tool, its impact is amplified when combined with:
+Balanced nutrition
+Regular physical activity
+Stress management
+Quality sleep
+Think of IV therapy as a precision enhancer elevating the results of an already healthy lifestyle.
+
+Final Thoughts
+Adding 10+ healthy years to your life is no longer aspirational; it is achievable through science-backed, proactive care.
+Personalized IV therapy plays a key role in this journey by correcting imbalances, enhancing cellular function, and supporting long-term health optimization.
+For those exploring IV therapy in Mumbai, Vytalyou offers a data-driven, medically supervised, and highly personalized approach far beyond conventional wellness treatments.
+From advanced diagnostics to tailored IV formulations, every step is designed to help you optimize your health today and invest in a stronger, healthier future.`
+    });
+
     console.log(`📝 Found ${validRows.length} blogs with content`);
 
     // Clear existing blogs
-    await Blog.deleteMany({});
-    console.log('🗑️  Cleared existing blog data');
+    // await Blog.deleteMany({});
+    // console.log('🗑️  Cleared existing blog data');
 
     const blogs = [];
 
@@ -244,7 +355,7 @@ async function seedBlogs() {
       const { metaTitle, metaDescription, content } = parseContent(row['Content']);
       const excerpt = extractExcerpt(content);
       const readTime = estimateReadTime(content);
-      const publishedAt = excelDateToJS(row['Date Published']);
+      const publishedAt = new Date('2026-04-01');
 
       const blog = {
         blogId: `blog-${row['No.'] || (i + 1)}`,
@@ -256,7 +367,7 @@ async function seedBlogs() {
         keywords,
         excerpt,
         content,
-        coverImage: coverImages[i % coverImages.length],
+        coverImage: row['CoverImage'] || coverImages[i % coverImages.length],
         author: 'VytalYou Team',
         readTime,
         published: true,
@@ -268,9 +379,17 @@ async function seedBlogs() {
       console.log(`  📄 Prepared: "${title}" (${readTime} min read)`);
     }
 
-    // Insert all blogs
-    const result = await Blog.insertMany(blogs);
-    console.log(`\n✅ Successfully migrated ${result.length} blogs to MongoDB!`);
+    // Insert or update all blogs
+    const result = [];
+    for (const blogData of blogs) {
+      const updated = await Blog.findOneAndUpdate(
+        { slug: blogData.slug },
+        blogData,
+        { upsert: true, new: true }
+      );
+      result.push(updated);
+    }
+    console.log(`\n✅ Successfully migrated/upserted ${result.length} blogs to MongoDB!`);
 
     // Print summary
     console.log('\n📋 Blog Summary:');

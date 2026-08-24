@@ -35,6 +35,17 @@ const inventoryItemSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// ── Expense ─────────────────────────────────────────────────────────────────
+const expenseSchema = new mongoose.Schema(
+  {
+    type: { type: String, enum: ['Therapeutic', 'Non-Therapeutic'], required: true },
+    name: { type: String, required: true },
+    price: { type: Number, required: true },
+    addedAt: { type: Date, default: Date.now },
+  },
+  { _id: true }
+);
+
 // ── Main Booking Schema ─────────────────────────────────────────────────────
 const bookingSchema = new mongoose.Schema(
   {
@@ -80,6 +91,7 @@ const bookingSchema = new mongoose.Schema(
     // Service execution
     inventory: [inventoryItemSchema],
     adminChart: adminChartSchema,
+    expenses: [expenseSchema],
     consentSigned: { type: Boolean, default: false },
     consentSignatureData: { type: String },  // base64 or URL
     feedback: nurseFeedbackSchema,

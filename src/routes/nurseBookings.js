@@ -448,6 +448,41 @@ router.post('/:id/admin-chart', async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// POST /:id/expenses  — Record expenses
+// ═══════════════════════════════════════════════════════════════════════════
+router.post('/:id/expenses', async (req, res) => {
+  try {
+    const { expenses } = req.body;
+
+    if (!Array.isArray(expenses)) {
+      return res.status(400).json({ error: 'Expenses must be an array.' });
+    }
+
+    const booking = await Booking.findOne({
+      _id: req.params.id,
+      nurse: req.nurseId,
+      status: 'in_progress',
+    });
+
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found or not in progress.' });
+    }
+
+    booking.expenses = expenses;
+
+    await booking.save();
+
+    res.json({
+      success: true,
+      message: 'Expenses saved successfully.',
+    });
+  } catch (error) {
+    console.error('Expenses error:', error);
+    res.status(500).json({ error: 'Failed to save expenses.' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 // POST /:id/consent  — Record consent
 // ═══════════════════════════════════════════════════════════════════════════
 router.post('/:id/consent', async (req, res) => {
