@@ -421,7 +421,8 @@ router.put('/bookings/:id/complete-clinic', adminAuth, async (req, res) => {
 // Dashboard stats
 router.get('/stats', adminAuth, async (req, res) => {
   try {
-    const totalBookings = await Booking.countDocuments();
+    const totalBookings = await Booking.countDocuments({ isSubscriptionSession: { $ne: true } });
+    const totalSubscriptions = await Subscription.countDocuments();
     const pendingBookings = await Booking.countDocuments({ status: 'pending' });
     const totalNurses = await Nurse.countDocuments();
     const approvedNurses = await Nurse.countDocuments({ isApproved: true });
@@ -430,6 +431,7 @@ router.get('/stats', adminAuth, async (req, res) => {
       success: true,
       stats: {
         totalBookings,
+        totalSubscriptions,
         pendingBookings,
         totalNurses,
         approvedNurses,
