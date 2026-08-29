@@ -5,9 +5,7 @@ const adminChartSchema = new mongoose.Schema(
   {
     bloodPressure: { type: String },   // e.g. "120/80 mmHg"
     heartRate: { type: Number },       // bpm
-    temperature: { type: Number },     // °F
     spo2: { type: Number },            // %
-    weight: { type: Number },          // kg
     notes: { type: String, default: '' },
     recordedAt: { type: Date, default: Date.now },
   },
@@ -41,6 +39,7 @@ const expenseSchema = new mongoose.Schema(
     type: { type: String, enum: ['Therapeutic', 'Non-Therapeutic'], required: true },
     name: { type: String, required: true },
     price: { type: Number, required: true },
+    receiptUrl: { type: String }, // Optional image of the receipt/invoice
     addedAt: { type: Date, default: Date.now },
   },
   { _id: true }
@@ -90,7 +89,7 @@ const bookingSchema = new mongoose.Schema(
 
     // Service execution
     inventory: [inventoryItemSchema],
-    adminChart: adminChartSchema,
+    adminCharts: [adminChartSchema],
     expenses: [expenseSchema],
     consentSigned: { type: Boolean, default: false },
     consentSignatureData: { type: String },  // base64 or URL

@@ -19,6 +19,7 @@ const router = express.Router();
 const Booking = require('../models/Booking');
 const Nurse = require('../models/Nurse');
 const nurseAuth = require('../middleware/nurseAuth');
+const upload = require('../middleware/upload');
 
 // All routes require nurse authentication
 router.use(nurseAuth);
@@ -373,7 +374,7 @@ router.post('/:id/end', async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════
 router.post('/:id/admin-chart', async (req, res) => {
   try {
-    const { bloodPressure, heartRate, temperature, spo2, weight, notes } = req.body;
+    const { bloodPressure, heartRate, spo2, notes } = req.body;
 
     const booking = await Booking.findOne({
       _id: req.params.id,
@@ -385,25 +386,49 @@ router.post('/:id/admin-chart', async (req, res) => {
       return res.status(404).json({ error: 'Booking not found or not in progress.' });
     }
 
-    booking.adminChart = {
+    if (!booking.adminCharts) {
+      booking.adminCharts = [];
+    }
+
+    booking.adminCharts.push({
       bloodPressure,
       heartRate,
-      temperature,
       spo2,
-      weight,
       notes: notes || '',
       recordedAt: new Date(),
-    };
+    });
 
     await booking.save();
 
     res.json({
       success: true,
       message: 'Admin chart saved successfully.',
+      adminCharts: booking.adminCharts
     });
   } catch (error) {
     console.error('Admin chart error:', error);
     res.status(500).json({ error: 'Failed to save admin chart.' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// POST /:id/expenses/upload  — Upload expense receipt image to S3
+// ═══════════════════════════════════════════════════════════════════════════
+router.post('/:id/expenses/upload', upload.single('receipt'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded.' });
+    }
+    
+    // The S3 URL is provided by multer-s3 in req.file.location
+    res.json({
+      success: true,
+      url: req.file.location,
+      message: 'Receipt uploaded successfully.'
+    });
+  } catch (error) {
+    console.error('Expense upload error:', error);
+    res.status(500).json({ error: 'Failed to upload receipt.' });
   }
 });
 

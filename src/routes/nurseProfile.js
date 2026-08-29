@@ -7,50 +7,16 @@
  */
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
-const multerS3 = require('multer-s3');
-const { S3Client } = require('@aws-sdk/client-s3');
 const path = require('path');
 const fs = require('fs');
 const Nurse = require('../models/Nurse');
 const nurseAuth = require('../middleware/nurseAuth');
+const upload = require('../middleware/upload');
 
 // All routes require nurse authentication
 router.use(nurseAuth);
 
-// ── AWS S3 & Multer setup for document uploads ──────────────────────────────
-const s3 = new S3Client({
-  region: process.env.AWS_REGION || 'eu-north-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  },
-});
-
-const upload = multer({
-  storage: multerS3({
-    s3: s3,
-    bucket: process.env.AWS_BUCKET_NAME || 'vytalyou-public-assets',
-    // Remove acl if the bucket enforces Object Ownership = Bucket owner enforced
-    // acl: 'public-read', 
-    metadata: function (req, file, cb) {
-      cb(null, { fieldName: file.fieldname });
-    },
-    key: function (req, file, cb) {
-      const ext = path.extname(file.originalname);
-      const safeName = `nurse-documents/${req.nurseId}_${Date.now()}${ext}`;
-      cb(null, safeName);
-    }
-  }),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
-  fileFilter: (req, file, cb) => {
-    const allowed = /jpeg|jpg|png|pdf|webp/;
-    const extOk = allowed.test(path.extname(file.originalname).toLowerCase());
-    const mimeOk = allowed.test(file.mimetype);
-    if (extOk || mimeOk) return cb(null, true);
-    cb(new Error('Only images (jpg, png, webp) and PDFs are allowed.'));
-  },
-});
+// AWS S3 & Multer setup for document uploads is now handled by shared middleware.
 
 // ── POST /register — Complete onboarding ────────────────────────────────────
 router.post('/register', async (req, res) => {
