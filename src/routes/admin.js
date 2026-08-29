@@ -327,6 +327,33 @@ router.put('/bookings/:id/location', adminAuth, async (req, res) => {
   }
 });
 
+// Admin schedule a booking
+router.put('/bookings/:id/schedule', adminAuth, async (req, res) => {
+  try {
+    const { preferredDate, preferredTimeSlot, address } = req.body;
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+    
+    if (preferredDate !== undefined) booking.preferredDate = preferredDate;
+    if (preferredTimeSlot !== undefined) booking.preferredTimeSlot = preferredTimeSlot;
+    if (address) {
+      booking.address = {
+        ...booking.address,
+        ...address
+      };
+    }
+
+    await booking.save();
+    const updatedBooking = await Booking.findById(req.params.id)
+      .populate('user', 'name phone email')
+      .populate('nurse', 'name phone nurseId');
+    res.json({ success: true, booking: updatedBooking });
+  } catch (error) {
+    console.error('Schedule Error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // Manually complete a clinic session
 router.put('/bookings/:id/complete-clinic', adminAuth, async (req, res) => {
   try {
