@@ -97,6 +97,32 @@ router.put('/nurses/:id/approve', adminAuth, async (req, res) => {
   }
 });
 
+// ── Users Management ────────────────────────────────────────────────────────
+// Search users by phone or name
+router.get('/users/search', adminAuth, async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q || q.length < 3) {
+      return res.json({ success: true, users: [] });
+    }
+    
+    // Normalize query for phone numbers (remove +91 if present for searching)
+    const normalizedQuery = q.replace(/^\+91/, '').trim();
+    
+    const users = await User.find({
+      $or: [
+        { phone: { $regex: normalizedQuery, $options: 'i' } },
+        { name: { $regex: q, $options: 'i' } }
+      ]
+    }).limit(10).select('name phone email age sex location');
+    
+    res.json({ success: true, users });
+  } catch (error) {
+    console.error('Search Users Error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // ── Bookings Management ─────────────────────────────────────────────────────
 // Get all non-subscription bookings
 router.get('/bookings', adminAuth, async (req, res) => {
@@ -425,6 +451,56 @@ router.put('/bookings/:id/complete-clinic', adminAuth, async (req, res) => {
     res.json({ success: true, booking: updatedBooking });
   } catch (error) {
     console.error('Complete Clinic Error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Full Edit Booking
+router.put('/bookings/:id/edit', adminAuth, async (req, res) => {
+  try {
+    const { name, phone, age, sex, serviceId, serviceTitle } = req.body;
+    const booking = await Booking.findById(req.params.id).populate('user');
+    
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+
+    // Update customer details on the user object
+    if (booking.user) {
+      if (name) booking.user.name = name;
+      if (phone) booking.user.phone = phone;
+      if (age) booking.user.age = age;
+      if (sex) booking.user.sex = sex;
+      await booking.user.save();
+    }
+    
+    // Update booking service details
+    if (serviceId) booking.serviceId = serviceId;
+    if (serviceTitle) booking.serviceTitle = serviceTitle;
+    
+    await booking.save();
+    
+    const updatedBooking = await Booking.findById(req.params.id)
+      .populate('user', 'name phone email age sex')
+      .populate('nurse', 'name phone nurseId');
+      
+    res.json({ success: true, booking: updatedBooking });
+  } catch (error) {
+    console.error('Edit Booking Error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Delete Booking
+router.delete('/bookings/:id', adminAuth, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+    
+    await Booking.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'Booking deleted successfully' });
+  } catch (error) {
+    console.error('Delete Booking Error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
