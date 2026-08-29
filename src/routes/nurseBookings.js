@@ -27,47 +27,7 @@ router.use(nurseAuth);
 const generateOTP = () =>
   Math.floor(100000 + Math.random() * 900000).toString();
 
-// ── Default inventory by service category ───────────────────────────────────
-// In production, this would come from a separate inventory collection
-const defaultInventory = {
-  iv_drips: [
-    { name: 'IV Cannula (20G)', quantity: 2, unit: 'pcs', isAvailable: true },
-    { name: 'IV Drip Set', quantity: 1, unit: 'pcs', isAvailable: true },
-    { name: 'Normal Saline (500ml)', quantity: 1, unit: 'bottle', isAvailable: true },
-    { name: 'Tourniquet', quantity: 1, unit: 'pcs', isAvailable: true },
-    { name: 'Alcohol Swabs', quantity: 5, unit: 'pcs', isAvailable: true },
-    { name: 'Gloves (Sterile)', quantity: 2, unit: 'pairs', isAvailable: true },
-    { name: 'Adhesive Tape', quantity: 1, unit: 'roll', isAvailable: true },
-    { name: 'Sharps Container', quantity: 1, unit: 'pcs', isAvailable: true },
-  ],
-  diagnostics: [
-    { name: 'Blood Collection Tubes', quantity: 3, unit: 'pcs', isAvailable: true },
-    { name: 'Vacutainer Needle', quantity: 2, unit: 'pcs', isAvailable: true },
-    { name: 'Tourniquet', quantity: 1, unit: 'pcs', isAvailable: true },
-    { name: 'Alcohol Swabs', quantity: 5, unit: 'pcs', isAvailable: true },
-    { name: 'Gloves (Sterile)', quantity: 2, unit: 'pairs', isAvailable: true },
-    { name: 'Sample Transport Bag', quantity: 1, unit: 'pcs', isAvailable: true },
-  ],
-  red_light: [
-    { name: 'Red Light Panel', quantity: 1, unit: 'device', isAvailable: true },
-    { name: 'Protective Goggles', quantity: 2, unit: 'pairs', isAvailable: true },
-    { name: 'Timer', quantity: 1, unit: 'pcs', isAvailable: true },
-  ],
-  hyperbaric: [
-    { name: 'Oxygen Mask', quantity: 1, unit: 'pcs', isAvailable: true },
-    { name: 'Pulse Oximeter', quantity: 1, unit: 'pcs', isAvailable: true },
-    { name: 'Blood Pressure Monitor', quantity: 1, unit: 'pcs', isAvailable: true },
-  ],
-  longevity: [
-    { name: 'IV Cannula (20G)', quantity: 2, unit: 'pcs', isAvailable: true },
-    { name: 'IV Drip Set', quantity: 2, unit: 'pcs', isAvailable: true },
-    { name: 'NAD+ Infusion Kit', quantity: 1, unit: 'kit', isAvailable: true },
-    { name: 'Gloves (Sterile)', quantity: 4, unit: 'pairs', isAvailable: true },
-    { name: 'Alcohol Swabs', quantity: 10, unit: 'pcs', isAvailable: true },
-    { name: 'Pulse Oximeter', quantity: 1, unit: 'pcs', isAvailable: true },
-    { name: 'Blood Pressure Monitor', quantity: 1, unit: 'pcs', isAvailable: true },
-  ],
-};
+// ── Default inventory is now handled dynamically in the Nurse App ───────────
 
 // ═══════════════════════════════════════════════════════════════════════════
 // GET /  — List bookings assigned to this nurse
@@ -574,11 +534,8 @@ router.get('/:id/inventory', async (req, res) => {
       return res.json({ inventory: booking.inventory });
     }
 
-    // Otherwise, return default inventory for the service category
-    const category = booking.service?.category || 'iv_drips';
-    const inventory = defaultInventory[category] || defaultInventory.iv_drips;
-
-    res.json({ inventory });
+    // Otherwise, return empty array since the app handles its own master checklist
+    res.json({ inventory: [] });
   } catch (error) {
     console.error('Get inventory error:', error);
     res.status(500).json({ error: 'Failed to fetch inventory.' });
