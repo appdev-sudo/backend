@@ -6,7 +6,30 @@ const Nurse = require('../models/Nurse');
 const Booking = require('../models/Booking');
 const User = require('../models/User');
 const MedicalService = require('../models/MedicalService');
+const Subscription = require('../models/Subscription');
 const adminAuth = require('../middleware/adminAuth');
+
+// Helper to get sessions based on serviceId
+function getSubscriptionSessions(serviceId) {
+  if (serviceId === 'starter-evolution') {
+    return ["NAD 1", "NAD 2", "NAD 3", "VUC 1"];
+  }
+  if (serviceId === 'renewal-series') {
+    return [
+      "NAD 1", "VUC 1", "NAD 2", "VUC 2", "NAD 3", "VUC 3",
+      "NAD 4", "VUC 4", "NAD 5", "VUC 5", "NAD 6", "VUC 6"
+    ];
+  }
+  if (serviceId === 'complete-recode') {
+    const sessions = [];
+    for (let i = 1; i <= 10; i++) {
+      sessions.push(`NAD ${i}`);
+      sessions.push(`VUC ${i}`);
+    }
+    return sessions;
+  }
+  return ["Session 1"];
+}
 
 // ── Authentication ────────────────────────────────────────────────────────
 router.post('/login', async (req, res) => {
@@ -171,7 +194,47 @@ router.post('/offline-booking', adminAuth, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Service not found.' });
     }
 
-    // 3. Create the Booking
+    // 3. Create the Booking or Subscription
+    if (service.serviceType === 'subscription') {
+      const sessionNames = getSubscriptionSessions(service.serviceId);
+      
+      const subscription = new Subscription({
+        user: user._id,
+        service: service._id,
+        serviceTitle: service.title,
+        totalSessions: sessionNames.length,
+      });
+      await subscription.save();
+
+      const childBookings = sessionNames.map((name, index) => {
+        return {
+          user: user._id,
+          service: service._id,
+          serviceId: service.serviceId,
+          serviceTitle: service.title,
+          address: { street, city, state, pincode, country: 'India' },
+          status: index === 0 && nurseId ? 'assigned' : 'pending',
+          nurse: index === 0 && nurseId ? nurseId : undefined,
+          isSubscriptionSession: true,
+          parentSubscription: subscription._id,
+          sessionName: name,
+          sessionOrder: index + 1,
+          locationType: 'home', // default
+          // Only the first session gets the requested date
+          preferredDate: index === 0 ? preferredDate : undefined,
+          preferredTimeSlot: index === 0 ? preferredTimeSlot : undefined,
+        };
+      });
+
+      const insertedBookings = await Booking.insertMany(childBookings);
+      const populatedBooking = await Booking.findById(insertedBookings[0]._id)
+        .populate('user', 'name phone email')
+        .populate('nurse', 'name phone nurseId');
+
+      return res.json({ success: true, booking: populatedBooking });
+    }
+
+    // Standard individual booking
     const booking = new Booking({
       user: user._id,
       service: service._id,
@@ -209,6 +272,77 @@ router.post('/offline-booking', adminAuth, async (req, res) => {
   } catch (error) {
     console.error('Offline Booking Error:', error);
     res.status(500).json({ success: false, message: 'Server error creating offline booking.' });
+  }
+});
+
+// ── Clinic Actions ────────────────────────────────────────────────────────────
+
+// Toggle location between home and clinic
+router.put('/bookings/:id/location', adminAuth, async (req, res) => {
+  try {
+    const { locationType } = req.body; // 'home' or 'clinic'
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+    
+    booking.locationType = locationType;
+    if (locationType === 'clinic') {
+      booking.nurse = undefined;
+      if (booking.status === 'assigned') booking.status = 'pending';
+    }
+    await booking.save();
+
+    const updatedBooking = await Booking.findById(req.params.id)
+      .populate('user', 'name phone email')
+      .populate('nurse', 'name phone nurseId');
+    res.json({ success: true, booking: updatedBooking });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Manually complete a clinic session
+router.put('/bookings/:id/complete-clinic', adminAuth, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+    
+    if (booking.locationType !== 'clinic') {
+      return res.status(400).json({ success: false, message: 'Only clinic sessions can be manually completed here' });
+    }
+
+    booking.status = 'completed';
+    booking.completedAt = new Date();
+    await booking.save();
+
+    // If part of a subscription, check if all are completed
+    if (booking.parentSubscription) {
+      const Subscription = require('../models/Subscription');
+      const sub = await Subscription.findById(booking.parentSubscription);
+      if (sub) {
+        const incompleteCount = await Booking.countDocuments({
+          parentSubscription: sub._id,
+          status: { $ne: 'completed' }
+        });
+        if (incompleteCount === 0) {
+          sub.status = 'completed';
+          await sub.save();
+        } else {
+          // Increment completedSessions 
+          sub.completedSessions = await Booking.countDocuments({
+             parentSubscription: sub._id,
+             status: 'completed'
+          });
+          await sub.save();
+        }
+      }
+    }
+
+    const updatedBooking = await Booking.findById(req.params.id)
+      .populate('user', 'name phone email');
+    res.json({ success: true, booking: updatedBooking });
+  } catch (error) {
+    console.error('Complete Clinic Error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 

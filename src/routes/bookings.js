@@ -1,5 +1,6 @@
 const express = require('express');
 const Booking = require('../models/Booking');
+const Subscription = require('../models/Subscription');
 const MedicalService = require('../models/MedicalService');
 const Nurse = require('../models/Nurse');
 const auth = require('../middleware/auth');
@@ -7,6 +8,28 @@ const auth = require('../middleware/auth');
 const router = express.Router();
 
 router.use(auth);
+
+// Helper to get sessions based on serviceId
+function getSubscriptionSessions(serviceId) {
+  if (serviceId === 'starter-evolution') {
+    return ["NAD 1", "NAD 2", "NAD 3", "VUC 1"];
+  }
+  if (serviceId === 'renewal-series') {
+    return [
+      "NAD 1", "VUC 1", "NAD 2", "VUC 2", "NAD 3", "VUC 3",
+      "NAD 4", "VUC 4", "NAD 5", "VUC 5", "NAD 6", "VUC 6"
+    ];
+  }
+  if (serviceId === 'complete-recode') {
+    const sessions = [];
+    for (let i = 1; i <= 10; i++) {
+      sessions.push(`NAD ${i}`);
+      sessions.push(`VUC ${i}`);
+    }
+    return sessions;
+  }
+  return ["Session 1"];
+}
 
 // POST /api/bookings — create booking (logged-in user)
 router.post('/', async (req, res) => {
@@ -19,6 +42,52 @@ router.post('/', async (req, res) => {
     if (!service) {
       return res.status(404).json({ error: 'Service not found.' });
     }
+
+    if (service.serviceType === 'subscription') {
+      const sessionNames = getSubscriptionSessions(service.serviceId);
+      
+      const subscription = new Subscription({
+        user: req.user._id,
+        service: service._id,
+        serviceTitle: service.title,
+        totalSessions: sessionNames.length,
+        paymentStatus: req.body.paymentId ? 'paid' : 'pending',
+        paymentId: req.body.paymentId || undefined,
+      });
+      await subscription.save();
+
+      const childBookings = sessionNames.map((name, index) => {
+        return {
+          user: req.user._id,
+          service: service._id,
+          serviceId: service.serviceId,
+          serviceTitle: service.title,
+          address: req.body.address,
+          notes: notes || undefined,
+          paymentStatus: req.body.paymentId ? 'paid' : 'pending',
+          paymentId: req.body.paymentId || undefined,
+          
+          isSubscriptionSession: true,
+          parentSubscription: subscription._id,
+          sessionName: name,
+          sessionOrder: index + 1,
+          locationType: 'home', // default
+          // Only the first session gets the requested date
+          preferredDate: index === 0 && preferredDate ? new Date(preferredDate) : undefined,
+          preferredTimeSlot: index === 0 ? preferredTimeSlot || undefined : undefined,
+        };
+      });
+
+      const insertedBookings = await Booking.insertMany(childBookings);
+      // Return the first booking or the subscription
+      return res.status(201).json({
+        subscription,
+        bookings: insertedBookings,
+        message: 'Subscription created'
+      });
+    }
+
+    // Standard individual booking
     const booking = new Booking({
       user: req.user._id,
       service: service._id,

@@ -65,6 +65,14 @@ const bookingSchema = new mongoose.Schema(
       formattedAddress: { type: String },
     },
     notes: { type: String },
+
+    // Subscription tracking fields
+    isSubscriptionSession: { type: Boolean, default: false },
+    parentSubscription: { type: mongoose.Schema.Types.ObjectId, ref: 'Subscription' },
+    sessionName: { type: String },
+    sessionOrder: { type: Number },
+    locationType: { type: String, enum: ['home', 'clinic'], default: 'home' },
+
     status: {
       type: String,
       enum: ['pending', 'confirmed', 'assigned', 'accepted', 'in_progress', 'completed', 'cancelled', 'rejected'],
