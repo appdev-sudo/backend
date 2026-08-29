@@ -98,16 +98,39 @@ router.put('/nurses/:id/approve', adminAuth, async (req, res) => {
 });
 
 // ── Bookings Management ─────────────────────────────────────────────────────
-// Get all bookings
+// Get all non-subscription bookings
 router.get('/bookings', adminAuth, async (req, res) => {
   try {
-    const bookings = await Booking.find()
+    const bookings = await Booking.find({ isSubscriptionSession: { $ne: true } })
       .populate('user', 'name phone email')
       .populate('nurse', 'name phone nurseId')
       .sort({ createdAt: -1 });
     res.json({ success: true, bookings });
   } catch (error) {
     console.error('Fetch Bookings Error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Get all subscriptions and their sessions
+router.get('/subscriptions', adminAuth, async (req, res) => {
+  try {
+    const subscriptions = await Subscription.find()
+      .populate('user', 'name phone email')
+      .sort({ createdAt: -1 })
+      .lean();
+    
+    // Fetch sessions for each subscription
+    const populatedSubs = await Promise.all(subscriptions.map(async (sub) => {
+      const sessions = await Booking.find({ parentSubscription: sub._id })
+        .populate('nurse', 'name phone nurseId')
+        .sort({ sessionOrder: 1 });
+      return { ...sub, sessions };
+    }));
+
+    res.json({ success: true, subscriptions: populatedSubs });
+  } catch (error) {
+    console.error('Fetch Subscriptions Error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
