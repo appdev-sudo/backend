@@ -173,16 +173,18 @@ router.post('/offline-booking', adminAuth, async (req, res) => {
       user = new User({
         name,
         phone,
-        email,
         age,
         sex,
         isPhoneVerified: false, // Since it's offline, they haven't verified OTP
       });
+      if (email && email.trim() !== '') {
+        user.email = email.trim();
+      }
       await user.save();
     } else {
       // Update existing user with any new info if provided
       if (name) user.name = name;
-      if (email) user.email = email;
+      if (email && email.trim() !== '') user.email = email.trim();
       if (age) user.age = age;
       if (sex) user.sex = sex;
       await user.save();
