@@ -135,6 +135,10 @@ router.get('/subscriptions', adminAuth, async (req, res) => {
   }
 });
 
+// Helper: Generate 6-digit OTP
+const generateOTP = () =>
+  Math.floor(100000 + Math.random() * 900000).toString();
+
 // Assign a nurse to a booking
 router.post('/bookings/:id/assign', adminAuth, async (req, res) => {
   try {
@@ -160,6 +164,14 @@ router.post('/bookings/:id/assign', adminAuth, async (req, res) => {
 
     booking.nurse = nurseId;
     booking.status = 'assigned';
+    
+    // Generate OTPs if they don't exist yet
+    if (!booking.startOtp) {
+      booking.startOtp = generateOTP();
+    }
+    if (!booking.endOtp) {
+      booking.endOtp = generateOTP();
+    }
     
     // Clear rejected array in case we are re-assigning manually
     booking.rejectedBy = [];
@@ -247,9 +259,10 @@ router.post('/offline-booking', adminAuth, async (req, res) => {
           sessionName: name,
           sessionOrder: index + 1,
           locationType: 'home', // default
-          // Only the first session gets the requested date
           preferredDate: index === 0 ? preferredDate : undefined,
           preferredTimeSlot: index === 0 ? preferredTimeSlot : undefined,
+          startOtp: index === 0 && nurseId ? generateOTP() : undefined,
+          endOtp: index === 0 && nurseId ? generateOTP() : undefined,
         };
       });
 
@@ -285,6 +298,8 @@ router.post('/offline-booking', adminAuth, async (req, res) => {
       if (nurse && nurse.isApproved && nurse.isActive) {
         booking.nurse = nurse._id;
         booking.status = 'assigned';
+        booking.startOtp = generateOTP();
+        booking.endOtp = generateOTP();
       }
     }
 
