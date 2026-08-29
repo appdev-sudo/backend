@@ -379,7 +379,7 @@ router.post('/:id/admin-chart', async (req, res) => {
     const booking = await Booking.findOne({
       _id: req.params.id,
       nurse: req.nurseId,
-      status: 'in_progress',
+      status: { $in: ['assigned', 'accepted', 'in_progress', 'completed'] },
     });
 
     if (!booking) {
@@ -446,7 +446,7 @@ router.post('/:id/expenses', async (req, res) => {
     const booking = await Booking.findOne({
       _id: req.params.id,
       nurse: req.nurseId,
-      status: 'in_progress',
+      status: { $in: ['assigned', 'accepted', 'in_progress', 'completed'] },
     });
 
     if (!booking) {
@@ -564,6 +564,34 @@ router.get('/:id/inventory', async (req, res) => {
   } catch (error) {
     console.error('Get inventory error:', error);
     res.status(500).json({ error: 'Failed to fetch inventory.' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// POST /:id/checklist  — Save nurse's manual inventory checklist
+// ═══════════════════════════════════════════════════════════════════════════
+router.post('/:id/checklist', async (req, res) => {
+  try {
+    const { checklist } = req.body;
+    const booking = await Booking.findOne({
+      _id: req.params.id,
+      nurse: req.nurseId,
+    });
+
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found.' });
+    }
+
+    booking.checklist = checklist;
+    await booking.save();
+
+    res.json({
+      success: true,
+      message: 'Inventory checklist saved successfully.',
+    });
+  } catch (error) {
+    console.error('Checklist error:', error);
+    res.status(500).json({ error: 'Failed to save inventory checklist.' });
   }
 });
 

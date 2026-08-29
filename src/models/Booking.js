@@ -88,6 +88,7 @@ const bookingSchema = new mongoose.Schema(
     completedAt: { type: Date },
 
     // Service execution
+    checklist: { type: mongoose.Schema.Types.Mixed },
     inventory: [inventoryItemSchema],
     adminCharts: [adminChartSchema],
     expenses: [expenseSchema],
