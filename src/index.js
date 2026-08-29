@@ -16,6 +16,7 @@ const blogRoutes = require('./routes/blogs');
 const nurseAuthRoutes = require('./routes/nurseAuth');
 const nurseProfileRoutes = require('./routes/nurseProfile');
 const nurseBookingsRoutes = require('./routes/nurseBookings');
+const adminRoutes = require('./routes/admin');
 
 connectDB();
 
@@ -41,6 +42,9 @@ app.use('/api/payments', paymentsRoutes);
 app.use('/api/nurse/auth', nurseAuthRoutes);       // OTP send/verify/resend for nurses
 app.use('/api/nurse', nurseProfileRoutes);          // register, profile, document upload
 app.use('/api/nurse/bookings', nurseBookingsRoutes); // booking lifecycle
+
+// ── Admin Routes ────────────────────────────────────────────────────────────
+app.use('/api/admin', adminRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, message: 'VytalYou API' });

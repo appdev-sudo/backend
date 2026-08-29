@@ -11,6 +11,7 @@
     "seed:blogs": "node src/scripts/seedBlogs.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1121.0",
     "bcryptjs": "^2.4.3",
     "cashfree-pg": "^5.1.0",
     "cors": "^2.8.5",
@@ -19,6 +20,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.0.3",
     "multer": "^2.1.1",
+    "multer-s3": "^3.0.1",
     "twilio": "^5.12.1",
     "xlsx": "^0.18.5"
   }
