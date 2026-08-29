@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
 const Nurse = require('../models/Nurse');
 const Booking = require('../models/Booking');
+const User = require('../models/User');
+const MedicalService = require('../models/MedicalService');
 const adminAuth = require('../middleware/adminAuth');
 
 // ── Authentication ────────────────────────────────────────────────────────
@@ -126,6 +128,87 @@ router.post('/bookings/:id/assign', adminAuth, async (req, res) => {
   } catch (error) {
     console.error('Assign Nurse Error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Create Offline Booking
+router.post('/offline-booking', adminAuth, async (req, res) => {
+  try {
+    const {
+      name, phone, email, age, sex,
+      serviceId, preferredDate, preferredTimeSlot,
+      street, city, state, pincode, nurseId
+    } = req.body;
+
+    if (!phone || !serviceId) {
+      return res.status(400).json({ success: false, message: 'Phone and Service ID are required.' });
+    }
+
+    // 1. Find or create the User
+    let user = await User.findOne({ phone });
+    if (!user) {
+      user = new User({
+        name,
+        phone,
+        email,
+        age,
+        sex,
+        isPhoneVerified: false, // Since it's offline, they haven't verified OTP
+      });
+      await user.save();
+    } else {
+      // Update existing user with any new info if provided
+      if (name) user.name = name;
+      if (email) user.email = email;
+      if (age) user.age = age;
+      if (sex) user.sex = sex;
+      await user.save();
+    }
+
+    // 2. Find the Service
+    const service = await MedicalService.findOne({ serviceId });
+    if (!service) {
+      return res.status(404).json({ success: false, message: 'Service not found.' });
+    }
+
+    // 3. Create the Booking
+    const booking = new Booking({
+      user: user._id,
+      service: service._id,
+      serviceId: service.serviceId,
+      serviceTitle: service.title,
+      preferredDate,
+      preferredTimeSlot,
+      address: {
+        street,
+        city,
+        state,
+        pincode,
+        country: 'India'
+      },
+      status: 'pending'
+    });
+
+    // 4. Assign Nurse immediately if provided
+    if (nurseId) {
+      const nurse = await Nurse.findById(nurseId);
+      if (nurse && nurse.isApproved && nurse.isActive) {
+        booking.nurse = nurse._id;
+        booking.status = 'assigned';
+      }
+    }
+
+    await booking.save();
+    
+    // Populate user and nurse for immediate frontend display
+    const populatedBooking = await Booking.findById(booking._id)
+      .populate('user', 'name phone email')
+      .populate('nurse', 'name phone nurseId');
+
+    res.json({ success: true, booking: populatedBooking });
+  } catch (error) {
+    console.error('Offline Booking Error:', error);
+    res.status(500).json({ success: false, message: 'Server error creating offline booking.' });
   }
 });
 
