@@ -220,7 +220,9 @@ router.post('/offline-booking', adminAuth, async (req, res) => {
     }
 
     // 3. Create the Booking or Subscription
-    if (service.serviceType === 'subscription') {
+    const subscriptionIds = ['starter-evolution', 'renewal-series', 'complete-recode'];
+
+    if (subscriptionIds.includes(service.serviceId) || service.serviceType === 'subscription') {
       const sessionNames = getSubscriptionSessions(service.serviceId);
       
       const subscription = new Subscription({

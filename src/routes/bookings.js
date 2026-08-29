@@ -43,7 +43,9 @@ router.post('/', async (req, res) => {
       return res.status(404).json({ error: 'Service not found.' });
     }
 
-    if (service.serviceType === 'subscription') {
+    const subscriptionIds = ['starter-evolution', 'renewal-series', 'complete-recode'];
+
+    if (subscriptionIds.includes(service.serviceId) || service.serviceType === 'subscription') {
       const sessionNames = getSubscriptionSessions(service.serviceId);
       
       const subscription = new Subscription({
@@ -111,13 +113,32 @@ router.post('/', async (req, res) => {
 // GET /api/bookings/me — list current user's bookings (with nurse info)
 router.get('/me', async (req, res) => {
   try {
-    const bookings = await Booking.find({ user: req.user._id })
+    const bookings = await Booking.find({ user: req.user._id, isSubscriptionSession: { $ne: true } })
       .sort({ createdAt: -1 })
       .populate('service', 'title category price serviceId')
       .populate('nurse', 'name phone nurseId');
     res.json(bookings);
   } catch (err) {
     res.status(500).json({ error: err.message || 'Failed to fetch bookings.' });
+  }
+});
+
+// GET /api/subscriptions/me — list current user's subscriptions
+router.get('/subscriptions/me', async (req, res) => {
+  try {
+    const subscriptions = await Subscription.find({ user: req.user._id })
+      .sort({ createdAt: -1 })
+      .populate('service', 'title category price serviceId');
+      
+    const populatedSubs = await Promise.all(subscriptions.map(async (sub) => {
+      const sessions = await Booking.find({ parentSubscription: sub._id })
+        .populate('nurse', 'name phone nurseId')
+        .sort({ sessionOrder: 1 });
+      return { ...sub.toObject(), sessions };
+    }));
+    res.json(populatedSubs);
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Failed to fetch subscriptions.' });
   }
 });
 
