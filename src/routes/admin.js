@@ -195,7 +195,8 @@ router.post('/offline-booking', adminAuth, async (req, res) => {
     const {
       name, phone, email, age, sex,
       serviceId, preferredDate, preferredTimeSlot,
-      street, city, state, pincode, nurseId, paymentStatus
+      street, city, state, pincode, nurseId, paymentStatus,
+      locationType, clinicLocation
     } = req.body;
 
     if (!phone || !serviceId) {
@@ -259,7 +260,8 @@ router.post('/offline-booking', adminAuth, async (req, res) => {
           parentSubscription: subscription._id,
           sessionName: name,
           sessionOrder: index + 1,
-          locationType: 'home', // default
+          locationType: locationType || 'home',
+          clinicLocation: locationType === 'clinic' ? clinicLocation : undefined,
           paymentStatus: paymentStatus || 'pending',
           preferredDate: index === 0 ? preferredDate : undefined,
           preferredTimeSlot: index === 0 ? preferredTimeSlot : undefined,
@@ -292,7 +294,9 @@ router.post('/offline-booking', adminAuth, async (req, res) => {
         country: 'India'
       },
       status: 'pending',
-      paymentStatus: paymentStatus || 'pending'
+      paymentStatus: paymentStatus || 'pending',
+      locationType: locationType || 'home',
+      clinicLocation: locationType === 'clinic' ? clinicLocation : undefined
     });
 
     // 4. Assign Nurse immediately if provided
@@ -325,12 +329,13 @@ router.post('/offline-booking', adminAuth, async (req, res) => {
 // Toggle location between home and clinic
 router.put('/bookings/:id/location', adminAuth, async (req, res) => {
   try {
-    const { locationType } = req.body; // 'home' or 'clinic'
+    const { locationType, clinicLocation } = req.body; // 'home' or 'clinic'
     const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
     
     booking.locationType = locationType;
     if (locationType === 'clinic') {
+      booking.clinicLocation = clinicLocation;
       booking.nurse = undefined;
       if (booking.status === 'assigned') booking.status = 'pending';
     }
@@ -348,12 +353,18 @@ router.put('/bookings/:id/location', adminAuth, async (req, res) => {
 // Admin schedule a booking
 router.put('/bookings/:id/schedule', adminAuth, async (req, res) => {
   try {
-    const { preferredDate, preferredTimeSlot, address } = req.body;
+    const { preferredDate, preferredTimeSlot, address, clinicLocation, locationType } = req.body;
     const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
     
+    if (locationType) booking.locationType = locationType;
     if (preferredDate !== undefined) booking.preferredDate = preferredDate;
     if (preferredTimeSlot !== undefined) booking.preferredTimeSlot = preferredTimeSlot;
+    
+    if (booking.locationType === 'clinic' && clinicLocation) {
+      booking.clinicLocation = clinicLocation;
+    }
+
     if (address) {
       booking.address = {
         ...booking.address,

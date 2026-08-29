@@ -72,6 +72,7 @@ const bookingSchema = new mongoose.Schema(
     sessionName: { type: String },
     sessionOrder: { type: Number },
     locationType: { type: String, enum: ['home', 'clinic'], default: 'home' },
+    clinicLocation: { type: String, enum: ['Vytalyou Powai', 'Vytalyou Juhu', 'Vytalyou Worli'] },
 
     status: {
       type: String,

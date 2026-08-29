@@ -73,7 +73,8 @@ router.post('/', async (req, res) => {
           parentSubscription: subscription._id,
           sessionName: name,
           sessionOrder: index + 1,
-          locationType: 'home', // default
+          locationType: req.body.locationType || 'home',
+          clinicLocation: req.body.locationType === 'clinic' ? req.body.clinicLocation : undefined,
           // Only the first session gets the requested date
           preferredDate: index === 0 && preferredDate ? new Date(preferredDate) : undefined,
           preferredTimeSlot: index === 0 ? preferredTimeSlot || undefined : undefined,
@@ -97,6 +98,8 @@ router.post('/', async (req, res) => {
       serviceTitle: service.title,
       preferredDate: preferredDate ? new Date(preferredDate) : undefined,
       preferredTimeSlot: preferredTimeSlot || undefined,
+      locationType: req.body.locationType || 'home',
+      clinicLocation: req.body.locationType === 'clinic' ? req.body.clinicLocation : undefined,
       address: req.body.address,
       notes: notes || undefined,
       paymentStatus: req.body.paymentId ? 'paid' : 'pending',
@@ -164,25 +167,22 @@ router.get('/:id', async (req, res) => {
 // PUT /api/bookings/:id/schedule — customer scheduling their own session
 router.put('/:id/schedule', async (req, res) => {
   try {
-    const { locationType, preferredDate, preferredTimeSlot, address } = req.body;
+    const { preferredDate, preferredTimeSlot, address, locationType, clinicLocation } = req.body;
+    const booking = await Booking.findOne({ _id: req.params.id, user: req.user._id });
     
-    const booking = await Booking.findOne({
-      _id: req.params.id,
-      user: req.user._id,
-    });
-
     if (!booking) {
-      return res.status(404).json({ error: 'Booking not found.' });
+      return res.status(404).json({ success: false, message: 'Booking not found' });
     }
-
-    if (booking.status !== 'pending') {
-      return res.status(400).json({ error: 'Only pending bookings can be scheduled.' });
-    }
-
-    booking.locationType = locationType || 'home';
-    booking.preferredDate = preferredDate ? new Date(preferredDate) : undefined;
-    booking.preferredTimeSlot = preferredTimeSlot || undefined;
     
+    if (locationType) {
+      booking.locationType = locationType;
+    }
+    if (booking.locationType === 'clinic' && clinicLocation) {
+      booking.clinicLocation = clinicLocation;
+    }
+    
+    if (preferredDate) booking.preferredDate = new Date(preferredDate);
+    if (preferredTimeSlot) booking.preferredTimeSlot = preferredTimeSlot;
     if (booking.locationType === 'home' && address) {
       booking.address = address;
     } else if (booking.locationType === 'clinic') {
