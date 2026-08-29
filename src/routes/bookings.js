@@ -161,4 +161,39 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// PUT /api/bookings/:id/schedule — customer scheduling their own session
+router.put('/:id/schedule', async (req, res) => {
+  try {
+    const { locationType, preferredDate, preferredTimeSlot, address } = req.body;
+    
+    const booking = await Booking.findOne({
+      _id: req.params.id,
+      user: req.user._id,
+    });
+
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found.' });
+    }
+
+    if (booking.status !== 'pending') {
+      return res.status(400).json({ error: 'Only pending bookings can be scheduled.' });
+    }
+
+    booking.locationType = locationType || 'home';
+    booking.preferredDate = preferredDate ? new Date(preferredDate) : undefined;
+    booking.preferredTimeSlot = preferredTimeSlot || undefined;
+    
+    if (booking.locationType === 'home' && address) {
+      booking.address = address;
+    } else if (booking.locationType === 'clinic') {
+      booking.address = undefined;
+    }
+
+    await booking.save();
+    res.json({ success: true, booking });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Failed to schedule session.' });
+  }
+});
+
 module.exports = router;
