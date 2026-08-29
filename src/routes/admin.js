@@ -195,7 +195,7 @@ router.post('/offline-booking', adminAuth, async (req, res) => {
     const {
       name, phone, email, age, sex,
       serviceId, preferredDate, preferredTimeSlot,
-      street, city, state, pincode, nurseId
+      street, city, state, pincode, nurseId, paymentStatus
     } = req.body;
 
     if (!phone || !serviceId) {
@@ -242,6 +242,7 @@ router.post('/offline-booking', adminAuth, async (req, res) => {
         service: service._id,
         serviceTitle: service.title,
         totalSessions: sessionNames.length,
+        paymentStatus: paymentStatus || 'pending'
       });
       await subscription.save();
 
@@ -259,6 +260,7 @@ router.post('/offline-booking', adminAuth, async (req, res) => {
           sessionName: name,
           sessionOrder: index + 1,
           locationType: 'home', // default
+          paymentStatus: paymentStatus || 'pending',
           preferredDate: index === 0 ? preferredDate : undefined,
           preferredTimeSlot: index === 0 ? preferredTimeSlot : undefined,
           startOtp: index === 0 && nurseId ? generateOTP() : undefined,
@@ -289,7 +291,8 @@ router.post('/offline-booking', adminAuth, async (req, res) => {
         pincode,
         country: 'India'
       },
-      status: 'pending'
+      status: 'pending',
+      paymentStatus: paymentStatus || 'pending'
     });
 
     // 4. Assign Nurse immediately if provided
