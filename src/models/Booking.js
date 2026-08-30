@@ -50,7 +50,7 @@ const bookingSchema = new mongoose.Schema(
   {
     // Existing fields (customer-facing)
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    service: { type: mongoose.Schema.Types.ObjectId, ref: 'MedicalService', required: true },
+    service: { type: mongoose.Schema.Types.ObjectId, ref: 'MedicalService', required: false },
     serviceId: { type: String, required: true },
     serviceTitle: { type: String, required: true },
     preferredDate: { type: Date },
@@ -65,6 +65,7 @@ const bookingSchema = new mongoose.Schema(
       formattedAddress: { type: String },
     },
     notes: { type: String },
+    adminNote: { type: String },
 
     // Subscription tracking fields
     isSubscriptionSession: { type: Boolean, default: false },

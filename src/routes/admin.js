@@ -7,6 +7,7 @@ const Booking = require('../models/Booking');
 const User = require('../models/User');
 const MedicalService = require('../models/MedicalService');
 const Subscription = require('../models/Subscription');
+const CustomService = require('../models/CustomService');
 const adminAuth = require('../middleware/adminAuth');
 
 // Helper to get sessions based on serviceId
@@ -138,6 +139,38 @@ router.get('/bookings', adminAuth, async (req, res) => {
   }
 });
 
+// Get all custom services
+router.get('/custom-services', adminAuth, async (req, res) => {
+  try {
+    const services = await CustomService.find().sort({ createdAt: -1 });
+    res.json({ success: true, services });
+  } catch (error) {
+    console.error('Fetch Custom Services Error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Create a new custom service
+router.post('/custom-services', adminAuth, async (req, res) => {
+  try {
+    const { title } = req.body;
+    if (!title) return res.status(400).json({ success: false, message: 'Title is required' });
+    
+    // Check if it already exists
+    const existing = await CustomService.findOne({ title });
+    if (existing) {
+      return res.status(400).json({ success: false, message: 'Service already exists' });
+    }
+
+    const service = new CustomService({ title });
+    await service.save();
+    res.json({ success: true, service });
+  } catch (error) {
+    console.error('Create Custom Service Error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // Get all subscriptions and their sessions
 router.get('/subscriptions', adminAuth, async (req, res) => {
   try {
@@ -222,7 +255,7 @@ router.post('/offline-booking', adminAuth, async (req, res) => {
       name, phone, email, age, sex,
       serviceId, preferredDate, preferredTimeSlot,
       street, city, state, pincode, nurseId, paymentStatus,
-      locationType, clinicLocation
+      locationType, clinicLocation, adminNote
     } = req.body;
 
     if (!phone || !serviceId) {
@@ -253,9 +286,20 @@ router.post('/offline-booking', adminAuth, async (req, res) => {
     }
 
     // 2. Find the Service
-    const service = await MedicalService.findOne({ serviceId });
+    let service = await MedicalService.findOne({ serviceId });
     if (!service) {
-      return res.status(404).json({ success: false, message: 'Service not found.' });
+      // Check custom services
+      const customService = await CustomService.findOne({ title: serviceId });
+      if (!customService) {
+        return res.status(404).json({ success: false, message: 'Service not found.' });
+      }
+      // Mock the service object for booking creation
+      service = {
+        _id: undefined,
+        serviceId: customService.title,
+        title: customService.title,
+        serviceType: 'individual'
+      };
     }
 
     // 3. Create the Booking or Subscription
@@ -280,6 +324,7 @@ router.post('/offline-booking', adminAuth, async (req, res) => {
           serviceId: service.serviceId,
           serviceTitle: service.title,
           address: { street, city, state, pincode, country: 'India' },
+          adminNote,
           status: index === 0 && nurseId ? 'assigned' : 'pending',
           nurse: index === 0 && nurseId ? nurseId : undefined,
           isSubscriptionSession: true,
@@ -322,7 +367,8 @@ router.post('/offline-booking', adminAuth, async (req, res) => {
       status: 'pending',
       paymentStatus: paymentStatus || 'pending',
       locationType: locationType || 'home',
-      clinicLocation: locationType === 'clinic' ? clinicLocation : undefined
+      clinicLocation: locationType === 'clinic' ? clinicLocation : undefined,
+      adminNote
     });
 
     // 4. Assign Nurse immediately if provided
