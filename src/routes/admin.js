@@ -47,7 +47,10 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET || 'secret123', {
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET environment variable is not set');
+    }
+    const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, {
       expiresIn: '7d',
     });
 
@@ -451,6 +454,29 @@ router.put('/bookings/:id/schedule', adminAuth, async (req, res) => {
     res.json({ success: true, booking: updatedBooking });
   } catch (error) {
     console.error('Schedule Error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Update booking payment status
+router.put('/bookings/:id/payment', adminAuth, async (req, res) => {
+  try {
+    const { paymentStatus } = req.body;
+    if (!['pending', 'paid', 'failed'].includes(paymentStatus)) {
+      return res.status(400).json({ success: false, message: 'Invalid payment status' });
+    }
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+
+    booking.paymentStatus = paymentStatus;
+    await booking.save();
+
+    const updatedBooking = await Booking.findById(req.params.id)
+      .populate('user', 'name phone email')
+      .populate('nurse', 'name phone nurseId');
+    res.json({ success: true, booking: updatedBooking });
+  } catch (error) {
+    console.error('Update Payment Error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
