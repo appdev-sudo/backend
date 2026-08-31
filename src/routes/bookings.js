@@ -12,19 +12,19 @@ router.use(auth);
 // Helper to get sessions based on serviceId
 function getSubscriptionSessions(serviceId) {
   if (serviceId === 'starter-evolution') {
-    return ["NAD 1", "NAD 2", "NAD 3", "VUC 1"];
+    return ["NAD 1", "NAD 2", "NAD 3", "VYC 1"];
   }
   if (serviceId === 'renewal-series') {
     return [
-      "NAD 1", "VUC 1", "NAD 2", "VUC 2", "NAD 3", "VUC 3",
-      "NAD 4", "VUC 4", "NAD 5", "VUC 5", "NAD 6", "VUC 6"
+      "NAD 1", "VYC 1", "NAD 2", "VYC 2", "NAD 3", "VYC 3",
+      "NAD 4", "VYC 4", "NAD 5", "VYC 5", "NAD 6", "VYC 6"
     ];
   }
   if (serviceId === 'complete-recode') {
     const sessions = [];
     for (let i = 1; i <= 10; i++) {
       sessions.push(`NAD ${i}`);
-      sessions.push(`VUC ${i}`);
+      sessions.push(`VYC ${i}`);
     }
     return sessions;
   }
