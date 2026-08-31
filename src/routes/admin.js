@@ -469,15 +469,24 @@ router.put('/bookings/:id/schedule', adminAuth, async (req, res) => {
 // Update booking payment amount/status
 router.put('/bookings/:id/payment', adminAuth, async (req, res) => {
   try {
-    const { amountToAdd, paymentStatus } = req.body;
+    const { amountToAdd, setTotalAmount, setAmountPaid, paymentStatus } = req.body;
     const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
 
     if (amountToAdd !== undefined) {
       booking.amountPaid = (booking.amountPaid || 0) + Number(amountToAdd);
-      if (booking.amountPaid >= booking.totalAmount && booking.totalAmount > 0) {
-        booking.paymentStatus = 'paid';
-      }
+    }
+    
+    if (setTotalAmount !== undefined) {
+      booking.totalAmount = Number(setTotalAmount);
+    }
+    
+    if (setAmountPaid !== undefined) {
+      booking.amountPaid = Number(setAmountPaid);
+    }
+
+    if (booking.amountPaid >= (booking.totalAmount || 0) && (booking.totalAmount || 0) > 0) {
+      booking.paymentStatus = 'paid';
     }
     
     // Explicit override if provided
@@ -500,15 +509,24 @@ router.put('/bookings/:id/payment', adminAuth, async (req, res) => {
 // Update subscription payment amount
 router.put('/subscriptions/:id/payment', adminAuth, async (req, res) => {
   try {
-    const { amountToAdd, paymentStatus } = req.body;
+    const { amountToAdd, setTotalAmount, setAmountPaid, paymentStatus } = req.body;
     const subscription = await Subscription.findById(req.params.id);
     if (!subscription) return res.status(404).json({ success: false, message: 'Subscription not found' });
 
     if (amountToAdd !== undefined) {
       subscription.amountPaid = (subscription.amountPaid || 0) + Number(amountToAdd);
-      if (subscription.amountPaid >= subscription.totalAmount && subscription.totalAmount > 0) {
-        subscription.paymentStatus = 'paid';
-      }
+    }
+    
+    if (setTotalAmount !== undefined) {
+      subscription.totalAmount = Number(setTotalAmount);
+    }
+    
+    if (setAmountPaid !== undefined) {
+      subscription.amountPaid = Number(setAmountPaid);
+    }
+
+    if (subscription.amountPaid >= (subscription.totalAmount || 0) && (subscription.totalAmount || 0) > 0) {
+      subscription.paymentStatus = 'paid';
     }
     
     // Explicit override if provided
