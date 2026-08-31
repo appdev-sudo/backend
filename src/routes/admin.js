@@ -8,6 +8,7 @@ const User = require('../models/User');
 const MedicalService = require('../models/MedicalService');
 const Subscription = require('../models/Subscription');
 const CustomService = require('../models/CustomService');
+const DeletedRecord = require('../models/DeletedRecord');
 const adminAuth = require('../middleware/adminAuth');
 
 // Helper to get sessions based on serviceId
@@ -610,7 +611,7 @@ router.put('/bookings/:id/edit', adminAuth, async (req, res) => {
   }
 });
 
-// Delete Booking
+// Delete Booking (with archival)
 router.delete('/bookings/:id', adminAuth, async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id);
@@ -618,10 +619,142 @@ router.delete('/bookings/:id', adminAuth, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
     
+    // Archive
+    await DeletedRecord.create({
+      originalCollection: 'Booking',
+      originalId: booking._id,
+      documentData: booking.toObject()
+    });
+
     await Booking.findByIdAndDelete(req.params.id);
-    res.json({ success: true, message: 'Booking deleted successfully' });
+    res.json({ success: true, message: 'Booking deleted and archived successfully' });
   } catch (error) {
     console.error('Delete Booking Error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Delete Subscription (with archival of parent and all children)
+router.delete('/subscriptions/:id', adminAuth, async (req, res) => {
+  try {
+    const subscription = await Subscription.findById(req.params.id);
+    if (!subscription) {
+      return res.status(404).json({ success: false, message: 'Subscription not found' });
+    }
+
+    // Archive Subscription
+    await DeletedRecord.create({
+      originalCollection: 'Subscription',
+      originalId: subscription._id,
+      documentData: subscription.toObject()
+    });
+
+    // Find and Archive all child bookings
+    const childBookings = await Booking.find({ parentSubscription: subscription._id });
+    for (const cb of childBookings) {
+      await DeletedRecord.create({
+        originalCollection: 'Booking',
+        originalId: cb._id,
+        documentData: cb.toObject()
+      });
+    }
+
+    // Delete child bookings and subscription
+    await Booking.deleteMany({ parentSubscription: subscription._id });
+    await Subscription.findByIdAndDelete(req.params.id);
+
+    res.json({ success: true, message: 'Subscription and child bookings deleted and archived successfully' });
+  } catch (error) {
+    console.error('Delete Subscription Error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Delete Nurse (with active booking check and archival)
+router.delete('/nurses/:id', adminAuth, async (req, res) => {
+  try {
+    const nurse = await Nurse.findById(req.params.id);
+    if (!nurse) {
+      return res.status(404).json({ success: false, message: 'Nurse not found' });
+    }
+
+    // Check for active bookings (status != completed and status != cancelled)
+    const activeBookingsCount = await Booking.countDocuments({
+      nurse: nurse._id,
+      paymentStatus: { $ne: 'completed' }, // simplistic check, maybe status field?
+      // Actually there's no specific 'status' field for the booking completion in the model, only paymentStatus or session completion. Let's just check if there are any assigned bookings.
+    });
+    
+    const assignedBookings = await Booking.countDocuments({ nurse: nurse._id });
+    if (assignedBookings > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Cannot delete: This nurse has ${assignedBookings} active booking(s) assigned. Please unassign them first.` 
+      });
+    }
+
+    // Archive Nurse
+    await DeletedRecord.create({
+      originalCollection: 'Nurse',
+      originalId: nurse._id,
+      documentData: nurse.toObject()
+    });
+
+    await Nurse.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'Nurse deleted and archived successfully' });
+  } catch (error) {
+    console.error('Delete Nurse Error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Get Archived Records
+router.get('/archives', adminAuth, async (req, res) => {
+  try {
+    const archives = await DeletedRecord.find().sort({ deletedAt: -1 });
+    res.json({ success: true, archives });
+  } catch (error) {
+    console.error('Get Archives Error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Restore Archived Record
+router.post('/archives/:id/restore', adminAuth, async (req, res) => {
+  try {
+    const archive = await DeletedRecord.findById(req.params.id);
+    if (!archive) {
+      return res.status(404).json({ success: false, message: 'Archived record not found' });
+    }
+
+    const { originalCollection, documentData } = archive;
+    
+    // Remove _id from documentData so mongoose doesn't complain, but wait, we want to keep the original ID if possible.
+    // If we keep the original ID, we can do new Model(documentData) because documentData contains _id.
+    
+    if (originalCollection === 'Booking') {
+      const newBooking = new Booking(documentData);
+      await newBooking.save();
+    } else if (originalCollection === 'Subscription') {
+      const newSub = new Subscription(documentData);
+      await newSub.save();
+    } else if (originalCollection === 'Nurse') {
+      const newNurse = new Nurse(documentData);
+      await newNurse.save();
+    } else {
+      return res.status(400).json({ success: false, message: 'Unknown collection type' });
+    }
+
+    // Remove from archive
+    await DeletedRecord.findByIdAndDelete(req.params.id);
+
+    res.json({ success: true, message: 'Record restored successfully' });
+  } catch (error) {
+    console.error('Restore Archive Error:', error);
+    // Handle duplicate key errors (if restored twice or ID conflict)
+    if (error.code === 11000) {
+       return res.status(400).json({ success: false, message: 'Record already exists in the main database.' });
+    }
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
