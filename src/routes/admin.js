@@ -257,8 +257,9 @@ router.post('/offline-booking', adminAuth, async (req, res) => {
     const {
       name, phone, email, age, sex,
       serviceId, preferredDate, preferredTimeSlot,
-      street, city, state, pincode, nurseId, paymentStatus,
-      locationType, clinicLocation, adminNote
+      street, city, state, pincode, nurseId,
+      locationType, clinicLocation, adminNote,
+      totalAmount, amountPaid
     } = req.body;
 
     if (!phone || !serviceId) {
@@ -316,7 +317,9 @@ router.post('/offline-booking', adminAuth, async (req, res) => {
         service: service._id,
         serviceTitle: service.title,
         totalSessions: sessionNames.length,
-        paymentStatus: paymentStatus || 'pending'
+        totalAmount: Number(totalAmount) || 0,
+        amountPaid: Number(amountPaid) || 0,
+        paymentStatus: (Number(amountPaid) || 0) >= (Number(totalAmount) || 0) && (Number(totalAmount) || 0) > 0 ? 'paid' : 'pending'
       });
       await subscription.save();
 
@@ -336,7 +339,9 @@ router.post('/offline-booking', adminAuth, async (req, res) => {
           sessionOrder: index + 1,
           locationType: locationType || 'home',
           clinicLocation: locationType === 'clinic' ? clinicLocation : undefined,
-          paymentStatus: paymentStatus || 'pending',
+          totalAmount: Number(totalAmount) || 0,
+          amountPaid: Number(amountPaid) || 0,
+          paymentStatus: (Number(amountPaid) || 0) >= (Number(totalAmount) || 0) && (Number(totalAmount) || 0) > 0 ? 'paid' : 'pending',
           preferredDate: index === 0 ? preferredDate : undefined,
           preferredTimeSlot: index === 0 ? preferredTimeSlot : undefined,
           startOtp: index === 0 && nurseId ? generateOTP() : undefined,
@@ -368,7 +373,9 @@ router.post('/offline-booking', adminAuth, async (req, res) => {
         country: 'India'
       },
       status: 'pending',
-      paymentStatus: paymentStatus || 'pending',
+      totalAmount: Number(totalAmount) || 0,
+      amountPaid: Number(amountPaid) || 0,
+      paymentStatus: (Number(amountPaid) || 0) >= (Number(totalAmount) || 0) && (Number(totalAmount) || 0) > 0 ? 'paid' : 'pending',
       locationType: locationType || 'home',
       clinicLocation: locationType === 'clinic' ? clinicLocation : undefined,
       adminNote
@@ -458,17 +465,25 @@ router.put('/bookings/:id/schedule', adminAuth, async (req, res) => {
   }
 });
 
-// Update booking payment status
+// Update booking payment amount/status
 router.put('/bookings/:id/payment', adminAuth, async (req, res) => {
   try {
-    const { paymentStatus } = req.body;
-    if (!['pending', 'paid', 'failed'].includes(paymentStatus)) {
-      return res.status(400).json({ success: false, message: 'Invalid payment status' });
-    }
+    const { amountToAdd, paymentStatus } = req.body;
     const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
 
-    booking.paymentStatus = paymentStatus;
+    if (amountToAdd !== undefined) {
+      booking.amountPaid = (booking.amountPaid || 0) + Number(amountToAdd);
+      if (booking.amountPaid >= booking.totalAmount && booking.totalAmount > 0) {
+        booking.paymentStatus = 'paid';
+      }
+    }
+    
+    // Explicit override if provided
+    if (paymentStatus && ['pending', 'paid', 'failed'].includes(paymentStatus)) {
+      booking.paymentStatus = paymentStatus;
+    }
+
     await booking.save();
 
     const updatedBooking = await Booking.findById(req.params.id)
@@ -477,6 +492,40 @@ router.put('/bookings/:id/payment', adminAuth, async (req, res) => {
     res.json({ success: true, booking: updatedBooking });
   } catch (error) {
     console.error('Update Payment Error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Update subscription payment amount
+router.put('/subscriptions/:id/payment', adminAuth, async (req, res) => {
+  try {
+    const { amountToAdd, paymentStatus } = req.body;
+    const subscription = await Subscription.findById(req.params.id);
+    if (!subscription) return res.status(404).json({ success: false, message: 'Subscription not found' });
+
+    if (amountToAdd !== undefined) {
+      subscription.amountPaid = (subscription.amountPaid || 0) + Number(amountToAdd);
+      if (subscription.amountPaid >= subscription.totalAmount && subscription.totalAmount > 0) {
+        subscription.paymentStatus = 'paid';
+      }
+    }
+    
+    // Explicit override if provided
+    if (paymentStatus && ['pending', 'paid', 'failed'].includes(paymentStatus)) {
+      subscription.paymentStatus = paymentStatus;
+    }
+
+    await subscription.save();
+    
+    // Optional: propagate payment update to child bookings
+    await Booking.updateMany(
+      { parentSubscription: subscription._id },
+      { $set: { paymentStatus: subscription.paymentStatus } }
+    );
+
+    res.json({ success: true, subscription });
+  } catch (error) {
+    console.error('Update Subscription Payment Error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });

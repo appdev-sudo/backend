@@ -86,6 +86,8 @@ const bookingSchema = new mongoose.Schema(
       default: 'pending',
     },
     paymentId: { type: String },
+    totalAmount: { type: Number, default: 0 },
+    amountPaid: { type: Number, default: 0 },
 
     // ── Nurse-specific fields ─────────────────────────────────────────────
     nurse: { type: mongoose.Schema.Types.ObjectId, ref: 'Nurse' },
